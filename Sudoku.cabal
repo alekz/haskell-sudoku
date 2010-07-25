@@ -1,0 +1,7 @@
+name:     sudoku
+version:  0.1
+
+executable sudoku
+  hs-source-dirs:  src
+  main-is:         Main.hs
+
