@@ -1,10 +1,17 @@
-module Sudoku where
+module Sudoku
+( fromString
+, printBoard
+, solve
+) where
 
 -- Imports ---------------------------------------------------------------------
 
 import qualified Data.Map as Map
+import qualified Data.Char as Char
+import qualified Data.List as List
+
 import Data.Map ((!))
-import Data.List ((\\), nub, intercalate)
+import Data.List ((\\))
 
 -- Data types ------------------------------------------------------------------
 
@@ -15,19 +22,29 @@ type Board = Map.Map CellCoord CellValue
 
 -- Utility functions -----------------------------------------------------------
 
--- Converts list to a Board type
-fromList :: [[CellValue]] -> Board
-fromList list = Map.fromList [((x, y), list !! (y - 1) !! (x - 1)) | x <- [1..9], y <- [1..9]]
+-- fromString :: String -> Maybe Board
+fromString str = board
+    where
+        -- Split string to lines, remove whitespace and take first 9 non-empty lines
+        ls = take 9 $ filter (not . null) $ map (filter (not . Char.isSpace)) $ lines str
+        -- Is correct only if all lines are of length 9
+        isCorrect = null $ filter (\l -> length l /= 9) ls
+        -- Converts any non-digit to a zero
+        getCell x = if Char.isDigit x then read [x] else 0
+        -- Builds a Board
+        board
+            | isCorrect = Just $ Map.fromList [((x, y), getCell $ ls !! (y - 1) !! (x - 1)) | x <- [1..9], y <- [1..9]]
+            | otherwise = Nothing
 
 -- Prints Sudoku board in a nice human-readable format
 printBoard :: Board -> String
 printBoard board =
-    unlines $ intercalate [line] $ map printRows coordGroups
+    unlines $ List.intercalate [line] $ map printRows coordGroups
     where coordGroups = [[], [1..3], [4..6], [7..9], []]
           line = " +-------+-------+-------+"
           printRows ys = map printRow ys
-          printRow y = intercalate " | " $ map (printCells y) coordGroups
-          printCells y xs = intercalate " " $ map (printCell y) xs
+          printRow y = List.intercalate " | " $ map (printCells y) coordGroups
+          printCells y xs = List.intercalate " " $ map (printCell y) xs
           printCell y x = if value == 0 then "." else show value
               where value = board ! (x,y)
 
@@ -40,7 +57,7 @@ coords = [(x, y) | x <- [1..9], y <- [1..9]]
 -- For a given cell coordinate, returns related cells, i.e. all cells from
 -- the same row, column and group
 relatedCells :: CellCoord -> [CellCoord]
-relatedCells (x, y) = nub $ rowCells ++ colCells ++ groupCells
+relatedCells (x, y) = List.nub $ rowCells ++ colCells ++ groupCells
     where rowCells = [(x', y) | x' <- ([1..9] \\ [x])]
           colCells = [(x, y') | y' <- ([1..9] \\ [y])]
           groupCells = [(x', y') | x' <- groupCoords x, y' <- groupCoords y] \\ [(x, y)]
@@ -50,7 +67,7 @@ relatedCells (x, y) = nub $ rowCells ++ colCells ++ groupCells
 -- For a given cell coordinate, returns all values used in related cells,
 -- i.e. in cells from the same row, column and group
 relatedCellsValues :: Board -> CellCoord -> [CellValue]
-relatedCellsValues board coord = nub [board ! c | c <- relatedCells coord] \\ [0]
+relatedCellsValues board coord = List.nub [board ! c | c <- relatedCells coord] \\ [0]
 
 -- Tries to find value for a single cell
 solveCell :: Board -> CellCoord -> Board
