@@ -40,7 +40,7 @@ fromString str = board
 -- Prints Sudoku board in a nice human-readable format
 printBoard :: Board -> String
 printBoard board =
-    unlines $ List.intercalate [line] $ map printRows coordGroups
+    unlines $ map tail $ List.intercalate [line] $ map printRows coordGroups
     where coordGroups = [[], [1..3], [4..6], [7..9], []]
           line = " +-------+-------+-------+"
           printRows ys = map printRow ys
