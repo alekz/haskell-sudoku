@@ -1,17 +1,37 @@
 module Sudoku where
 
+-- Imports ---------------------------------------------------------------------
+
 import qualified Data.Map as Map
 import Data.Map ((!))
 import Data.List ((\\), nub, intercalate)
+
+-- Data types ------------------------------------------------------------------
 
 type Coord = Int                 -- 1..9
 type CellCoord = (Coord, Coord)  -- (x, y)
 type CellValue = Int             -- 0..9; 0 = unknown value
 type Board = Map.Map CellCoord CellValue
 
+-- Utility functions -----------------------------------------------------------
+
 -- Converts list to a Board type
 fromList :: [[CellValue]] -> Board
 fromList list = Map.fromList [((x, y), list !! (y - 1) !! (x - 1)) | x <- [1..9], y <- [1..9]]
+
+-- Prints Sudoku board in a nice human-readable format
+printBoard :: Board -> String
+printBoard board =
+    unlines $ intercalate [line] $ map printRows coordGroups
+    where coordGroups = [[], [1..3], [4..6], [7..9], []]
+          line = " +-------+-------+-------+"
+          printRows ys = map printRow ys
+          printRow y = intercalate " | " $ map (printCells y) coordGroups
+          printCells y xs = intercalate " " $ map (printCell y) xs
+          printCell y x = if value == 0 then "." else show value
+              where value = board ! (x,y)
+
+-- Solving functions -----------------------------------------------------------
 
 -- Returns list of all Sudoku coordinates
 coords :: [CellCoord]
@@ -49,17 +69,3 @@ solve board
     | board == board' = board
     | otherwise       = solve board'
     where board' = foldl solveCell board coords
-
--- Prints Sudoku board in a nice human-readable format
-printBoard :: Board -> String
-printBoard board =
-    line ++ (intercalate line $ map printRows coordGroups) ++ line
-    where coordGroups = [[1..3], [4..6], [7..9]]
-          line = "+-------+-------+-------+\n"
-          printRows ys = foldl1 (++) $ map printRow ys
-          printRow y = "| " ++ (intercalate " | " $ map (printCells y) coordGroups) ++ " |\n"
-          printCells y xs = intercalate " " $ map (printCell y) xs
-          printCell y x
-              | value == 0 = "."
-              | otherwise  = show value
-              where value = board ! (x,y)
