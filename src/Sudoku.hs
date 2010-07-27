@@ -29,7 +29,7 @@ fromString str = board
         -- Split string to lines, remove whitespace and take first 9 non-empty lines
         ls = take 9 $ filter (not . null) $ map (filter (not . Char.isSpace)) $ lines str
         -- Is correct only if all lines are of length 9
-        isCorrect = (length ls == 9) && (null $ filter (\l -> length l /= 9) ls)
+        isCorrect = (length ls == 9) && (null $ filter ((/= 9) . length) ls)
         -- Converts any non-digit to a zero
         getCell x = if Char.isDigit x then read [x] else 0
         -- Builds a Board
