@@ -7,13 +7,12 @@ module Sudoku
 -- Imports ---------------------------------------------------------------------
 
 import qualified Data.Map as Map
-import qualified Data.Char as Char
-import qualified Data.List as List
-import qualified Data.Ord as Ord
 
 import Data.Maybe (fromJust, isNothing)
 import Data.Map ((!))
-import Data.List ((\\))
+import Data.List ((\\), sortBy, intercalate)
+import Data.Char (isSpace, isDigit)
+import Data.Ord (comparing)
 
 -- Data types ------------------------------------------------------------------
 
@@ -53,7 +52,7 @@ solve board
         -- Auxiliary function, returns number of allowed values for a given cell
         numValues = length . getAllowedCellValues board
         -- Coordinates of a single empty cell with the lowest number of allowed values
-        coord = head $ List.sortBy (Ord.comparing numValues) $ getEmptyCells board
+        coord = head $ sortBy (comparing numValues) $ getEmptyCells board
         -- All allowed values for that cell
         values = getAllowedCellValues board coord
         -- Tries to put every allowed value in the cell and then solve the result
@@ -67,27 +66,25 @@ isSolved board = null $ filter (== 0) $ Map.elems board
 
 -- Converts string to a Sudoku board
 fromString :: String -> Maybe Board
-fromString str = board
+fromString str
+    | isCorrect = Just $ Map.fromList [((x, y), getCell $ ls !! (y - 1) !! (x - 1)) | x <- [1..9], y <- [1..9]]
+    | otherwise = Nothing
     where
         -- Split string to lines, remove whitespace and take first 9 non-empty lines
-        ls = take 9 $ filter (not . null) $ map (filter (not . Char.isSpace)) $ lines str
+        ls = take 9 $ filter (not . null) $ map (filter (not . isSpace)) $ lines str
         -- Is correct only if all lines are of length 9
         isCorrect = (length ls == 9) && (null $ filter ((/= 9) . length) ls)
         -- Converts any non-digit to a zero
-        getCell x = if Char.isDigit x then read [x] else 0
-        -- Builds a Board
-        board
-            | isCorrect = Just $ Map.fromList [((x, y), getCell $ ls !! (y - 1) !! (x - 1)) | x <- [1..9], y <- [1..9]]
-            | otherwise = Nothing
+        getCell x = if isDigit x then read [x] else 0
 
 -- Prints Sudoku board in a nice human-readable format
 printBoard :: Board -> String
 printBoard board =
-    unlines $ map tail $ List.intercalate [line] $ map printRows coordGroups
+    unlines $ map tail $ intercalate [line] $ map printRows coordGroups
     where coordGroups = [[], [1..3], [4..6], [7..9], []]
           line = " +-------+-------+-------+"
           printRows ys = map printRow ys
-          printRow y = List.intercalate " | " $ map (printCells y) coordGroups
-          printCells y xs = List.intercalate " " $ map (printCell y) xs
+          printRow y = intercalate " | " $ map (printCells y) coordGroups
+          printCells y xs = intercalate " " $ map (printCell y) xs
           printCell y x = if value == 0 then "." else show value
               where value = board ! (x,y)
