@@ -1,1 +1,6 @@
-My attempt to write Sudoku solver in Haskell
+My attempt to write Sudoku solver in Haskell.
+
+
+Usage: ./Main <filename>
+
+  filename - text file with Sudoku puzzle, see /examples/*.txt

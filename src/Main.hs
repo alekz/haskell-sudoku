@@ -28,8 +28,9 @@ processFile filename = do
 
 result :: String -> String
 result contents
-    | isNothing maybeBoard = "Invalid sudoku data"
-    | otherwise = unlines ["Original", p board, "Solved", p solvedBoard]
+    | isNothing maybeBoard  = "Invalid sudoku data"
+    | isNothing solvedBoard = "Can't solve"
+    | otherwise = unlines ["Original", p board, "Solved", p $ fromJust solvedBoard]
     where maybeBoard = Sudoku.fromString contents
           board = fromJust maybeBoard
           solvedBoard = Sudoku.solve board

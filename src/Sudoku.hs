@@ -9,7 +9,9 @@ module Sudoku
 import qualified Data.Map as Map
 import qualified Data.Char as Char
 import qualified Data.List as List
+import qualified Data.Ord as Ord
 
+import Data.Maybe (fromJust, isNothing)
 import Data.Map ((!))
 import Data.List ((\\))
 
@@ -19,6 +21,47 @@ type Coord = Int                 -- 1..9
 type CellCoord = (Coord, Coord)  -- (x, y)
 type CellValue = Int             -- 0..9; 0 = unknown value
 type Board = Map.Map CellCoord CellValue
+
+-- Solving functions -----------------------------------------------------------
+
+-- For a given cell coordinate, returns related cells, i.e. all cells from
+-- the same row, column and group
+getRelatedCells :: CellCoord -> [CellCoord]
+getRelatedCells (x, y) = rowCells ++ colCells ++ groupCells
+    where rowCells = [(x', y) | x' <- ([1..9] \\ [x])]
+          colCells = [(x, y') | y' <- ([1..9] \\ [y])]
+          groupCells = [(x', y') | x' <- groupCoords x, y' <- groupCoords y]
+              where firstCoord n = 3 * ((n - 1) `div` 3) + 1
+                    groupCoords n = take 3 [(firstCoord n)..] \\ [n]
+
+-- For a given cell coordinate, returns all values allowed for that cell
+getAllowedCellValues :: Board -> CellCoord -> [CellValue]
+getAllowedCellValues board coord = [1..9] \\ [board ! c | c <- getRelatedCells coord]
+
+-- For a given board, returns coordinates of all empty cells
+getEmptyCells :: Board -> [CellCoord]
+getEmptyCells board = Map.keys $ Map.filter (== 0) board
+
+-- Solves sudoku puzzle
+solve :: Board -> Maybe Board
+solve board
+    | isSolved board = Just board
+    | null values    = Nothing
+    | null solutions = Nothing
+    | otherwise      = head solutions
+    where
+        -- Auxiliary function, returns number of allowed values for a given cell
+        numValues = length . getAllowedCellValues board
+        -- Coordinates of a single empty cell with the lowest number of allowed values
+        coord = head $ List.sortBy (Ord.comparing numValues) $ getEmptyCells board
+        -- All allowed values for that cell
+        values = getAllowedCellValues board coord
+        -- Tries to put every allowed value in the cell and then solve the result
+        solutions = filter (not . isNothing) $ map solve $ map (\v -> Map.insert coord v board) values
+
+-- Checks whether puzzle is solved
+isSolved :: Board -> Bool
+isSolved board = null $ filter (== 0) $ Map.elems board
 
 -- Utility functions -----------------------------------------------------------
 
@@ -48,42 +91,3 @@ printBoard board =
           printCells y xs = List.intercalate " " $ map (printCell y) xs
           printCell y x = if value == 0 then "." else show value
               where value = board ! (x,y)
-
--- Solving functions -----------------------------------------------------------
-
--- Returns list of all Sudoku coordinates
-coords :: [CellCoord]
-coords = [(x, y) | x <- [1..9], y <- [1..9]]
-
--- For a given cell coordinate, returns related cells, i.e. all cells from
--- the same row, column and group
-relatedCells :: CellCoord -> [CellCoord]
-relatedCells (x, y) = List.nub $ rowCells ++ colCells ++ groupCells
-    where rowCells = [(x', y) | x' <- ([1..9] \\ [x])]
-          colCells = [(x, y') | y' <- ([1..9] \\ [y])]
-          groupCells = [(x', y') | x' <- groupCoords x, y' <- groupCoords y] \\ [(x, y)]
-              where firstCoord n = 3 * ((n - 1) `div` 3) + 1
-                    groupCoords n = take 3 [(firstCoord n)..]
-
--- For a given cell coordinate, returns all values used in related cells,
--- i.e. in cells from the same row, column and group
-relatedCellsValues :: Board -> CellCoord -> [CellValue]
-relatedCellsValues board coord = List.nub [board ! c | c <- relatedCells coord] \\ [0]
-
--- Tries to find value for a single cell
-solveCell :: Board -> CellCoord -> Board
-solveCell board coord
-    | isSolved    = board
-    | hasSolution = Map.insert coord cellSolution board
-    | otherwise   = board
-    where isSolved = (board ! coord) /= 0
-          allowedValues = [1..9] \\ (relatedCellsValues board coord)
-          hasSolution = length allowedValues == 1
-          cellSolution = head allowedValues
-
--- Solves the Sudoku
-solve :: Board -> Board
-solve board
-    | board == board' = board
-    | otherwise       = solve board'
-    where board' = foldl solveCell board coords
